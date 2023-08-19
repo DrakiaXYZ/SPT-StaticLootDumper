@@ -29,23 +29,30 @@ namespace DrakiaXYZ.StaticLootDumper
         [PatchPrefix]
         public static void PatchPrefix()
         {
-            List<SPTLootContainer> lootContainers = new List<SPTLootContainer>();
+            var containersGroups = new List<SPTContainersGroup>();
 
-            Object.FindObjectsOfType<LootableContainer>().ExecuteForEach(container =>
+            Object.FindObjectsOfType<LootableContainersGroup>().ExecuteForEach(containersGroup =>
             {
-                lootContainers.Add(new SPTLootContainer { name = container.name, probability = (container.SpawnChance / 100f), template = container.AsLootPointParameters() });
-                //Logger.LogInfo($"Container: {container.name} ({container.Id}): {container.SpawnChance} ({container.SpawnType})");
+                var sptContainersGroup = new SPTContainersGroup { groupId = containersGroup.Id, minContainers = containersGroup.Min, maxContainers = containersGroup.Max, containerList = new List<string>() };
+
+                foreach (LootableContainer container in containersGroup.GetComponentsInChildren<LootableContainer>())
+                {
+                    sptContainersGroup.containerList.Add(container.Id);
+                }
+
+                containersGroups.Add(sptContainersGroup);
             });
 
-            string jsonString = JsonConvert.SerializeObject(lootContainers, Formatting.Indented);
+            string jsonString = JsonConvert.SerializeObject(containersGroups, Formatting.Indented);
             Logger.LogInfo(jsonString);
         }
     }
 
-    public class SPTLootContainer
+    public class SPTContainersGroup
     {
-        public float probability;
-        public string name;
-        public LootPointParameters template;
+        public string groupId;
+        public int minContainers;
+        public int maxContainers;
+        public List<string> containerList;
     }
 }
