@@ -5,6 +5,7 @@ using EFT;
 using EFT.Interactive;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using UnityEngine;
 
@@ -13,8 +14,12 @@ namespace DrakiaXYZ.StaticLootDumper
     [BepInPlugin("xyz.drakia.staticlootdumper", "DrakiaXYZ-StaticLootDumper", "1.0.0")]
     public class StaticLootDumperPlugin : BaseUnityPlugin
     {
+        public static string PluginFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        public static string DumpFolder = Path.Combine(PluginFolder, "StaticDumps");
+
         private void Awake()
         {
+            Directory.CreateDirectory(DumpFolder);
             new DumpLoot().Enable();
         }
     }
@@ -29,6 +34,9 @@ namespace DrakiaXYZ.StaticLootDumper
         [PatchPrefix]
         public static void PatchPrefix()
         {
+            var gameWorld = Singleton<GameWorld>.Instance;
+            string mapName = gameWorld.MainPlayer.Location.ToLower();
+
             var containersData = new SPTContainersData();
 
             Object.FindObjectsOfType<LootableContainersGroup>().ExecuteForEach(containersGroup =>
@@ -43,7 +51,19 @@ namespace DrakiaXYZ.StaticLootDumper
             });
 
             string jsonString = JsonConvert.SerializeObject(containersData, Formatting.Indented);
+            Logger.LogInfo($"Map Static Containers for {mapName}:");
             Logger.LogInfo(jsonString);
+
+            string outputFile = Path.Combine(StaticLootDumperPlugin.DumpFolder, $"{mapName}.json");
+            if (File.Exists(outputFile))
+            {
+                File.Delete(outputFile);
+            }
+            File.Create(outputFile).Dispose();
+            StreamWriter streamWriter = new StreamWriter(outputFile);
+            streamWriter.Write(jsonString);
+            streamWriter.Flush();
+            streamWriter.Close();
         }
     }
 
