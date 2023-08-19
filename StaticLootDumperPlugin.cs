@@ -29,30 +29,38 @@ namespace DrakiaXYZ.StaticLootDumper
         [PatchPrefix]
         public static void PatchPrefix()
         {
-            var containersGroups = new List<SPTContainersGroup>();
+            var containersData = new SPTContainersData();
 
             Object.FindObjectsOfType<LootableContainersGroup>().ExecuteForEach(containersGroup =>
             {
-                var sptContainersGroup = new SPTContainersGroup { groupId = containersGroup.Id, minContainers = containersGroup.Min, maxContainers = containersGroup.Max, containerList = new List<string>() };
-
-                foreach (LootableContainer container in containersGroup.GetComponentsInChildren<LootableContainer>())
-                {
-                    sptContainersGroup.containerList.Add(container.Id);
-                }
-
-                containersGroups.Add(sptContainersGroup);
+                var sptContainersGroup = new SPTContainersGroup { minContainers = containersGroup.Min, maxContainers = containersGroup.Max };
+                containersData.containersGroups.Add(containersGroup.Id, sptContainersGroup);
             });
 
-            string jsonString = JsonConvert.SerializeObject(containersGroups, Formatting.Indented);
+            Object.FindObjectsOfType<LootableContainer>().ExecuteForEach(container =>
+            {
+                containersData.containers.Add(container.Id, new SPTContainer { groupId = container.LootableContainersGroupId });
+            });
+
+            string jsonString = JsonConvert.SerializeObject(containersData, Formatting.Indented);
             Logger.LogInfo(jsonString);
         }
     }
 
-    public class SPTContainersGroup
+    public class SPTContainersData
+    {
+        public Dictionary<string, SPTContainersGroup> containersGroups = new Dictionary<string, SPTContainersGroup>();
+        public Dictionary<string, SPTContainer> containers = new Dictionary<string, SPTContainer>();
+    }
+
+    public class SPTContainer
     {
         public string groupId;
+    }
+
+    public class SPTContainersGroup
+    {
         public int minContainers;
         public int maxContainers;
-        public List<string> containerList;
     }
 }
