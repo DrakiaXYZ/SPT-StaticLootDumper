@@ -39,20 +39,41 @@ namespace DrakiaXYZ.StaticLootDumper
 
             var containersData = new SPTContainersData();
 
-            Object.FindObjectsOfType<LootableContainersGroup>().ExecuteForEach(containersGroup =>
+            Resources.FindObjectsOfTypeAll(typeof(LootableContainersGroup)).ExecuteForEach(obj =>
             {
+                var containersGroup = (LootableContainersGroup)obj;
                 var sptContainersGroup = new SPTContainersGroup { minContainers = containersGroup.Min, maxContainers = containersGroup.Max };
-                containersData.containersGroups.Add(containersGroup.Id, sptContainersGroup);
+                if (containersData.containersGroups.ContainsKey(containersGroup.Id))
+                {
+                    Logger.LogError($"Container group ID {containersGroup.Id} already exists in dictionary!");
+                }
+                else
+                {
+                    containersData.containersGroups.Add(containersGroup.Id, sptContainersGroup);
+                }
             });
 
-            Object.FindObjectsOfType<LootableContainer>().ExecuteForEach(container =>
+            Resources.FindObjectsOfTypeAll(typeof(LootableContainer)).ExecuteForEach(obj =>
             {
-                containersData.containers.Add(container.Id, new SPTContainer { groupId = container.LootableContainersGroupId });
+                var container = (LootableContainer)obj;
+
+                // Skip empty ID containers
+                if (container.Id.Length == 0)
+                {
+                    return;
+                }
+
+                if (containersData.containers.ContainsKey(container.Id))
+                {
+                    Logger.LogError($"Container {container.Id} already exists in dictionary!");
+                }
+                else
+                {
+                    containersData.containers.Add(container.Id, new SPTContainer { groupId = container.LootableContainersGroupId });
+                }
             });
 
             string jsonString = JsonConvert.SerializeObject(containersData, Formatting.Indented);
-            Logger.LogInfo($"Map Static Containers for {mapName}:");
-            Logger.LogInfo(jsonString);
 
             string outputFile = Path.Combine(StaticLootDumperPlugin.DumpFolder, $"{mapName}.json");
             if (File.Exists(outputFile))
